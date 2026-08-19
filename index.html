@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Air Pollution Monitor</title>
+</head>
+<body>
+
+    <h1>Smart Air Pollution Monitor</h1>
+
+    <!-- 🔥 CITY INPUT -->
+    <label>Select City:</label>
+    <select id="city">
+        <option value="delhi">Delhi</option>
+        <option value="pune">Pune</option>
+    </select>
+
+    <button onclick="getData()">Get Air Data</button>
+
+    <h2>📊 Air Data:</h2>
+    <pre id="data"></pre>
+
+    <h2>🌱 Recommended Plants:</h2>
+    <ul id="plants"></ul>
+
+    <h2>🍎 Recommended Foods:</h2>
+    <ul id="foods"></ul>
+
+    <h2>⚠️ Safety Actions:</h2>
+    <ul id="actions"></ul>
+
+    <script>
+        async function getData() {
+            const city = document.getElementById("city").value;
+
+            const response = await fetch(`http://127.0.0.1:8000/air?city=${city}`);
+            const result = await response.json();
+
+            // Show raw data
+            document.getElementById("data").innerText =
+                JSON.stringify(result.data, null, 2);
+
+            // Clear lists
+            document.getElementById("plants").innerHTML = "";
+            document.getElementById("foods").innerHTML = "";
+            document.getElementById("actions").innerHTML = "";
+
+            // Fill plants
+            result.recommendation.plants.forEach(item => {
+                let li = document.createElement("li");
+                li.innerText = item;
+                document.getElementById("plants").appendChild(li);
+            });
+
+            // Fill foods
+            result.recommendation.foods.forEach(item => {
+                let li = document.createElement("li");
+                li.innerText = item;
+                document.getElementById("foods").appendChild(li);
+            });
+
+            // Fill actions
+            result.recommendation.actions.forEach(item => {
+                let li = document.createElement("li");
+                li.innerText = item;
+                document.getElementById("actions").appendChild(li);
+            });
+        }
+    </script>
+
+</body>
+</html>
