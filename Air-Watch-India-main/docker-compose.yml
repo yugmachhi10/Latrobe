@@ -1,0 +1,68 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL ──────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: airwatch
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airwatch_secret}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (for caching & pub/sub alerts) ────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  # ── FastAPI Backend ─────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-airwatch_secret}@postgres/airwatch
+      WAQI_TOKEN: ${WAQI_TOKEN:-demo}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+
+  # ── Nginx (serves frontend + proxies API) ───────
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:
